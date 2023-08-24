@@ -1,0 +1,23 @@
+source ~/.config/antigen/antigen.zsh
+
+antigen use oh-my-zsh
+
+# https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/colored-man-pages/README.md
+antigen bundle colored-man-pages
+
+# https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/encode64/README.md
+antigen bundle encode64
+
+# https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/python/README.md
+antigen bundle python
+
+# https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/tmux/README.md
+antigen bundle tmux
+
+antigen bundle zsh-users/zsh-completions
+antigen bundle zsh-users/zsh-autosuggestions
+antigen bundle zsh-users/zsh-syntax-highlighting
+
+antigen theme amuse
+
+antigen apply

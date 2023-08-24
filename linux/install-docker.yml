@@ -1,0 +1,68 @@
+---
+- name: Install Docker on servers
+  hosts: all
+
+  vars:
+    docker_ipv6_bridge: 2001:db8:1::/64
+
+  tasks:
+    - name: 'Create the Docker configuration directory'
+      ansible.builtin.file:
+        path: /etc/docker
+        owner: root
+        group: root
+        state: directory
+        mode: '0755'
+
+    - name: 'Preconfigure Docker'
+      ansible.builtin.template:
+        src: templates/docker-daemon.j2
+        dest: /etc/docker/daemon.json
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 'Ensure dnf-plugins-core and epel-release are installed'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.dnf:
+        name:
+          - dnf-plugins-core
+          - epel-release
+        state: present
+
+    - name: 'Add Docker CentOS repository'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.command: sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      register: add_repo
+      changed_when:
+        - add_repo.rc == 0
+
+    - name: 'Install Docker using dnf'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.dnf:
+        name:
+          - containerd.io
+          - docker-ce
+          - docker-ce-cli
+          - python3-docker
+        state: present
+
+    - name: 'Install Docker using apk'
+      when: ansible_facts['os_family'] == 'Alpine'
+      community.general.apk:
+        name: docker,py3-docker-py
+        update_cache: true
+
+    - name: 'Install Docker using apt'
+      when: ansible_facts['os_family'] == 'Debian'
+      ansible.builtin.apt:
+        update_cache: true
+        pkg:
+          - docker.io
+          - python3-docker
+
+    - name: 'Ensure Docker is running'
+      ansible.builtin.service:
+        name: docker
+        enabled: true
+        state: started

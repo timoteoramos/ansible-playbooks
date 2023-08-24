@@ -1,0 +1,31 @@
+---
+- name: Update user profile
+  hosts: all
+
+  vars:
+    ssh_user: timoteoramos
+
+  tasks:
+    - name: 'Configure current user'
+      ansible.builtin.user:
+        name: '{{ ansible_user_id }}'
+        append: true
+        groups:
+          - docker
+          - sudo
+        shell: /bin/zsh
+
+    - name: 'Checkout Antigen' # noqa: latest
+      become: true
+      become_user: '{{ ssh_user }}'
+      ansible.builtin.git:
+        repo: https://github.com/zsh-users/antigen.git
+        dest: ~/.config/antigen
+
+    - name: 'Configure zshell profile'
+      become: true
+      become_user: '{{ ssh_user }}'
+      ansible.builtin.template:
+        src: templates/user-zshrc.j2
+        dest: ~/.zshrc
+        mode: '0644'

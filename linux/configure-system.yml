@@ -1,0 +1,120 @@
+---
+- name: Configure Debian-based servers
+  hosts: all
+
+  vars:
+    langpack: pt
+    locale: pt_BR
+    timezone: America/Sao_Paulo
+
+  tasks:
+    - name: 'Prepare to generate locale: {{ locale }}'
+      when: ansible_facts['os_family'] == 'Debian'
+      ansible.builtin.template:
+        src: templates/locale-gen.j2
+        dest: /etc/locale.gen
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 'Set timezone to {{ timezone }}'
+      ansible.builtin.file:
+        src: /usr/share/zoneinfo/{{ timezone }}
+        dest: /etc/localtime
+        owner: root
+        group: root
+        state: link
+        force: true
+        follow: false
+
+    - name: 'Install basic packages using apt'
+      when: ansible_facts['os_family'] == 'Debian'
+      ansible.builtin.apt:
+        update_cache: true
+        pkg:
+          - apt-utils
+          - aptitude
+          - locales
+          - tzdata
+
+    - name: 'Install basic packages using dnf'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.dnf:
+        name:
+          - dnf-plugins-core
+          - epel-release
+          - glibc-langpack-{{ langpack }}
+        state: present
+
+    - name: 'Reconfigure locales'
+      when: ansible_facts['os_family'] == 'Debian'
+      ansible.builtin.command: locale-gen
+      register: locale_gen
+      changed_when:
+        - locale_gen.rc == 0
+
+    - name: 'Set locale'
+      when: ansible_facts['os_family'] != 'Alpine'
+      ansible.builtin.command: localectl set-locale LANG={{ locale }}.UTF-8
+      register: set_locale
+      changed_when:
+        - set_locale.rc == 0
+
+    - name: 'Configure tmux'
+      ansible.builtin.template:
+        src: templates/system-tmux.j2
+        dest: /etc/tmux.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 'Install some useful tools using apk'
+      when: ansible_facts['os_family'] == 'Alpine'
+      community.general.apk:
+        name: curl,dialog,fuse,git,htop,jq,mosh,nano,psmisc,pv,ranger,screen,sysstat,tmux,vim,wget,zsh
+        update_cache: true
+
+    - name: 'Install some useful tools using apt'
+      when: ansible_facts['os_family'] == 'Debian'
+      ansible.builtin.apt:
+        pkg:
+          - curl
+          - dialog
+          - fuse
+          - git
+          - htop
+          - jq
+          - mosh
+          - nano
+          - psmisc
+          - pv
+          - ranger
+          - screen
+          - sysstat
+          - tmux
+          - vim-tiny
+          - wget
+          - zsh
+
+    - name: 'Install some useful tools using dnf'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.dnf:
+        name:
+          - curl
+          - dialog
+          - fuse
+          - git
+          - htop
+          - jq
+          - mosh
+          - nano
+          - psmisc
+          - pv
+          - ranger
+          - screen
+          - sysstat
+          - tmux
+          - vim-minimal
+          - wget
+          - zsh
+        state: present

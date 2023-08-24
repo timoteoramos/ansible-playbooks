@@ -1,0 +1,25 @@
+---
+- name: Initialize a Swarm cluster
+  hosts: all
+
+  vars:
+    advertise_addr: '127.0.0.1'
+    data_path_addr: '127.0.0.1'
+    data_path_port: 9789
+    task_history_limit: 5
+
+  tasks:
+    - name: 'Initialize the cluster'
+      ansible.builtin.command: >
+        docker swarm init
+        --advertise-addr {{ advertise_addr }}
+        --data-path-addr {{ data_path_addr }}
+        --data-path-port {{ data_path_port }}
+        --task-history-limit {{ task_history_limit }}
+      register: cluster_init
+      changed_when:
+        - cluster_init.rc == 0
+
+    - name: 'Display results'
+      ansible.builtin.debug:
+        var: cluster_init.stdout

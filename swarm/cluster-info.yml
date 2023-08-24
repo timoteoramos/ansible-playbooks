@@ -1,0 +1,12 @@
+---
+- name: Get detailed cluster information
+  hosts: all
+
+  tasks:
+    - name: 'Get cluster facts'
+      community.docker.docker_swarm_info:
+      register: cluster_data
+
+    - name: 'Display facts'
+      ansible.builtin.debug:
+        var: cluster_data.swarm_facts

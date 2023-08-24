@@ -1,0 +1,14 @@
+---
+- name: Add a node to a Swarm cluster
+  hosts: all
+
+  vars:
+    manager_addr: '127.0.0.1:2377'
+    join_token:
+
+  tasks:
+    - name: 'Join to the cluster'
+      community.docker.docker_swarm:
+        state: join
+        join_token: '{{ join_token }}'
+        remote_addrs: ['{{ manager_addr }}']

@@ -1,0 +1,8 @@
+---
+- name: Remove a node from a Swarm cluster
+  hosts: all
+
+  tasks:
+    - name: 'Leave from cluster'
+      community.docker.docker_swarm:
+        state: absent
