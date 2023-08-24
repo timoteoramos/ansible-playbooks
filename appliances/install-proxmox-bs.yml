@@ -1,0 +1,46 @@
+---
+- name: Install Proxmox Backup Server
+  hosts: all
+
+  vars:
+    proxmox_domain: example.local
+
+  tasks:
+    - name: 'Configure /etc/hosts'
+      when: ansible_facts['distribution'] == 'Debian'
+      ansible.builtin.template:
+        src: templates/debian-hosts.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 'Add no-subscription repository'
+      when: ansible_facts['distribution'] == 'Debian'
+      ansible.builtin.template:
+        src: templates/proxmox-bs-sources.j2
+        dest: /etc/apt/sources.list.d/pbs-install-repo.list
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 'Download the repository key'
+      when: ansible_facts['distribution'] == 'Debian'
+      ansible.builtin.get_url:
+        url: https://enterprise.proxmox.com/debian/proxmox-release-{{ ansible_facts['distribution_release'] }}.gpg
+        dest: /etc/apt/trusted.gpg.d/proxmox-release-{{ ansible_facts['distribution_release'] }}.gpg
+        mode: '0644'
+
+    - name: 'Install PBS'
+      when: ansible_facts['distribution'] == 'Debian'
+      ansible.builtin.apt:
+        update_cache: true
+        pkg:
+          - proxmox-backup-server
+
+    - name: 'Disable enterprise repository'
+      when: ansible_facts['distribution'] == 'Debian'
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list.d/pbs-enterprise.list
+        regexp: '^deb'
+        replace: '# deb'
