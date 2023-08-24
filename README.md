@@ -6,7 +6,7 @@ These are my personal Ansible playbooks that I use more frequently. Feel free to
 
 First of all, you need to configure your `/etc/ansible/hosts`:
 
-```toml
+```ini
 [example_host_group]
 your_host ansible_host=yourhost.example.local ansible_user=root
 ```
