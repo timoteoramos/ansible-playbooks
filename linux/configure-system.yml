@@ -1,5 +1,5 @@
 ---
-- name: Configure Debian-based servers
+- name: Configure Linux system (Alpine, Debian, Ubuntu and RHEL-based distros)
   hosts: all
 
   vars:
