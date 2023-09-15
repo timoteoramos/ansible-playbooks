@@ -12,6 +12,9 @@ pipx install --include-deps ansible
 
 # Minimal setup
 pipx install ansible-core
+
+# Inject ansible-lint (for development purposes)
+pipx inject --include-apps ansible ansible-lint
 ```
 
 More information in the [official documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html).
