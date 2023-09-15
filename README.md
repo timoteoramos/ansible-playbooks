@@ -2,6 +2,20 @@
 
 These are my personal Ansible playbooks that I use more frequently. Feel free to use, copy or learn something with these playbooks.
 
+## Setup reference
+
+You just need to have [pipx](https://pypi.org/project/pipx/) installed on your system.
+
+```bash
+# Full setup
+pipx install --include-deps ansible
+
+# Minimal setup
+pipx install ansible-core
+```
+
+More information in the [official documentation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html).
+
 ## Startup reference
 
 First of all, you need to configure your `/etc/ansible/hosts`:
