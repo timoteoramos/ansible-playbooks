@@ -1,0 +1,63 @@
+---
+- name: Install MariaDB with Galera cluster
+  hosts: all
+
+  vars:
+    image_tag: '11.0'
+    ldap_base: 'dc=example,dc=org'
+    ldap_bind_dn: 'cn=admin,dc=example,dc=org'
+    ldap_bind_password: 'adminpassword'
+    ldap_uri: 'ldap://'
+    mariadb_root_password: 'rootpassword'
+    mariadb_backup_password: 'backuppassword'
+    mariadb_enable_ldap: 'no'
+    timezone: 'America/Sao_Paulo'
+
+  tasks:
+    - name: 'Pull the latest image'
+      community.docker.docker_image:
+        name: 'docker.io/bitnami/mariadb-galera:{{ image_tag }}'
+        source: 'pull'
+
+    - name: 'Check the current service'
+      community.docker.docker_swarm_service_info:
+        name: 'mariadb_cluster'
+      register: service
+
+    - name: 'Remove service if exists'
+      when: service.exists
+      community.docker.docker_swarm_service:
+        name: 'mariadb_cluster'
+        state: 'absent'
+
+    - name: 'Initialize the service'
+      community.docker.docker_swarm_service:
+        name: 'mariadb_cluster'
+        image: 'docker.io/bitnami/mariadb-galera:{{ image_tag }}'
+        env:
+          MARIADB_ROOT_PASSWORD: '{{ mariadb_root_password }}'
+          MARIADB_GALERA_MARIABACKUP_PASSWORD: '{{ mariadb_backup_password }}'
+          MARIADB_GALERA_CLUSTER_ADDRESS: 'gcomm://'
+          MARIADB_ENABLE_LDAP: '{{ mariadb_enable_ldap }}'
+          LDAP_URI: '{{ ldap_uri }}'
+          LDAP_BASE: '{{ ldap_base }}'
+          LDAP_BIND_DN: '{{ ldap_bind_dn }}'
+          LDAP_BIND_PASSWORD: '{{ ldap_bind_password }}'
+          TZ: '{{ timezone }}'
+        healthcheck:
+          test: ['CMD', '/opt/bitnami/scripts/mariadb-galera/healthcheck.sh']
+          interval: '15s'
+          timeout: '5s'
+          retries: 6
+        mode: 'global'
+        publish:
+          - mode: 'host'
+            protocol: 'tcp'
+            published_port: 3306
+            target_port: 3306
+        networks:
+          - services
+        mounts:
+          - type: volume
+            source: mariadb_cluster_data
+            target: /bitnami/mariadb
