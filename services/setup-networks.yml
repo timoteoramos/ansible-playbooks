@@ -1,0 +1,25 @@
+---
+- name: Setup external networks used on services
+  hosts: all
+
+  vars:
+    public_ipv4: '10.254.0.0/16'
+    public_ipv6: 'fdd1:ac8c:0557:7ce2::/64'
+    services_ipv4: '10.253.0.0/16'
+
+  tasks:
+    - name: 'Create "public" network'
+      community.docker.docker_network:
+        name: public
+        driver: overlay
+        enable_ipv6: true
+        ipam_config:
+          - subnet: '{{ public_ipv4 }}'
+          - subnet: '{{ public_ipv6 }}'
+
+    - name: 'Create "services" network'
+      community.docker.docker_network:
+        name: services
+        driver: overlay
+        ipam_config:
+          - subnet: '{{ services_ipv4 }}'
