@@ -1,0 +1,81 @@
+---
+- name: Install Semaphore
+  hosts: all
+
+  vars:
+    image_tag: 'latest'
+    semaphore_db_user: 'semaphore'
+    semaphore_db_pass: 's3m4ph0r3'
+    semaphore_db_host: 'mariadb_node'
+    semaphore_db_port: '3306'
+    semaphore_db_dialect: 'mysql'
+    semaphore_db: 'semaphore'
+    semaphore_playbook_path: '/tmp/semaphore'
+    semaphore_admin_password: 's3m4ph0r3'
+    semaphore_admin_name: 'Semaphore'
+    semaphore_admin_email: 'admin@example.org'
+    semaphore_admin: 'admin'
+    semaphore_access_key_encryption: '8rGrmGD6lTyNuApP/1884ZLnkuwM6hHVPsKQED37EDI='
+    semaphore_ldap_activated: 'no'
+    semaphore_ldap_host: 'ldaphost'
+    semaphore_ldap_port: '636'
+    semaphore_ldap_need_tls: 'yes'
+    semaphore_ldap_dn_bind: 'uid=bind_user,cn=users,cn=accounts,dc=local,dc=shiftsystems,dc=net'
+    semaphore_ldap_password: 'ldap_bind_account_password'
+    semaphore_ldap_dn_search: 'dc=local,dc=example,dc=com'
+    semaphore_ldap_search_filter: '(\u0026(uid=%s)(memberOf=cn=ipausers,cn=groups,cn=accounts,dc=local,dc=example,dc=com))'
+    timezone: 'America/Sao_Paulo'
+
+  tasks:
+    - name: 'Pull the latest image'
+      community.docker.docker_image:
+        name: 'docker.io/semaphoreui/semaphore:{{ image_tag }}'
+        source: 'pull'
+
+    - name: 'Check the current service'
+      community.docker.docker_swarm_service_info:
+        name: 'semaphore_app'
+      register: service
+
+    - name: 'Remove service if exists'
+      when: service.exists
+      community.docker.docker_swarm_service:
+        name: 'semaphore_app'
+        state: 'absent'
+
+    - name: 'Initialize the service'
+      community.docker.docker_swarm_service:
+        name: 'semaphore_app'
+        image: 'docker.io/semaphoreui/semaphore:{{ image_tag }}'
+        env:
+          SEMAPHORE_DB_USER: '{{ semaphore_db_user }}'
+          SEMAPHORE_DB_PASS: '{{ semaphore_db_pass }}'
+          SEMAPHORE_DB_HOST: '{{ semaphore_db_host }}'
+          SEMAPHORE_DB_PORT: '{{ semaphore_db_port }}'
+          SEMAPHORE_DB_DIALECT: '{{ semaphore_db_dialect }}'
+          SEMAPHORE_DB: '{{ semaphore_db }}'
+          SEMAPHORE_PLAYBOOK_PATH: '{{ semaphore_playbook_path }}'
+          SEMAPHORE_ADMIN_PASSWORD: '{{ semaphore_admin_password }}'
+          SEMAPHORE_ADMIN_NAME: '{{ semaphore_admin_name }}'
+          SEMAPHORE_ADMIN_EMAIL: '{{ semaphore_admin_email }}'
+          SEMAPHORE_ADMIN: '{{ semaphore_admin }}'
+          SEMAPHORE_ACCESS_KEY_ENCRYPTION: '{{ semaphore_access_key_encryption }}'
+          SEMAPHORE_LDAP_ACTIVATED: '{{ semaphore_ldap_activated }}'
+          SEMAPHORE_LDAP_HOST: '{{ semaphore_ldap_host }}'
+          SEMAPHORE_LDAP_PORT: '{{ semaphore_ldap_port }}'
+          SEMAPHORE_LDAP_NEEDTLS: '{{ semaphore_ldap_need_tls }}'
+          SEMAPHORE_LDAP_DN_BIND: '{{ semaphore_ldap_dn_bind }}'
+          SEMAPHORE_LDAP_PASSWORD: '{{ semaphore_ldap_password }}'
+          SEMAPHORE_LDAP_DN_SEARCH: '{{ semaphore_ldap_dn_search }}'
+          SEMAPHORE_LDAP_SEARCH_FILTER: '{{ semaphore_ldap_search_filter }}'
+          TZ: '{{ timezone }}'
+        networks:
+          - services
+        placement:
+          constraints:
+            - node.role == manager
+        publish:
+          - mode: 'host'
+            protocol: 'tcp'
+            published_port: 3001
+            target_port: 3000
