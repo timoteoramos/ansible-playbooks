@@ -1,0 +1,19 @@
+---
+- name: Configure pfSense to run as a QEMU/KVM guest
+  hosts: all
+
+  tasks:
+    - name: 'Configure /etc/rc.conf.local'
+      when: ansible_facts['distribution'] == 'FreeBSD'
+      ansible.builtin.template:
+        src: templates/rc-conf-local.j2
+        dest: /etc/rc.conf.local
+        owner: root
+        group: wheel
+        mode: '0644'
+
+    - name: 'Install qemu-guest-agent'
+      when: ansible_facts['distribution'] == 'FreeBSD'
+      community.general.pkgng:
+        name: qemu-guest-agent
+        state: present
