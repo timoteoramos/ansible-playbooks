@@ -7,9 +7,8 @@
 
   tasks:
     - name: 'Configure /etc/hosts'
-      when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.template:
-        src: templates/debian-hosts.j2
+        src: templates/etc-hosts.j2
         dest: /etc/hosts
         owner: root
         group: root
