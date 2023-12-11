@@ -4,7 +4,7 @@
 
   vars:
     kernel_version: 6.2
-    proxmox_domain: example.local
+    server_domain: example.local
 
   tasks:
     - name: 'Configure /etc/hosts'

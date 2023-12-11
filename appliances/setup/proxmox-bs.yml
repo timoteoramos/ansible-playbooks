@@ -3,7 +3,7 @@
   hosts: all
 
   vars:
-    proxmox_domain: example.local
+    server_domain: example.local
 
   tasks:
     - name: 'Configure /etc/hosts'
