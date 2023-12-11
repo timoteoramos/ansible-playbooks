@@ -1,0 +1,59 @@
+---
+- name: Install FreeIPA on Red Hat based distros
+  hosts: all
+
+  vars:
+    ipa_admin_password: YourAdminP4ssw0rd
+    ipa_dns_forwarders:
+    ipa_dns_enabled: true
+    ipa_ds_password: DomainServerP4ssw0rd
+    server_domain: example.local
+
+  tasks:
+    - name: 'Configure /etc/hosts'
+      ansible.builtin.template:
+        src: templates/etc-hosts.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 'Allow traffic in default zone for freeipa-4 service'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.posix.firewalld:
+        service: freeipa-4
+        immediate: true
+        permanent: true
+        state: enabled
+
+    - name: 'Install FreeIPA packages'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.dnf:
+        name:
+          - ipa-server-dns
+          - ipa-server-trust-ad
+        state: present
+
+    - name: 'Non-interactive setup'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.command: >
+        ipa-server-install -U
+        --no-ntp
+        --domain={{ server_domain }}
+        --realm={{ server_domain | upper }}
+        --hostname={{ inventory_hostname }}.{{ server_domain }}
+        --ip-address={{ ansible_host }}
+        --ds-password={{ ipa_ds_password }}
+        --admin-password={{ ipa_admin_password }}
+        {% if ipa_dns_enabled %}
+        --setup-dns
+        {% if ipa_dns_forwarders %}--forwarder={{ ipa_dns_forwarders }}{% else %}--no-forwarders{% endif %}
+        {% endif %}
+      register: freeipa_install
+      changed_when:
+        - freeipa_install.rc == 0
+
+    - name: 'Display output'
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.debug:
+        var: freeipa_install.stdout
