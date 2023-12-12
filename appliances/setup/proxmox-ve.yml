@@ -76,10 +76,3 @@
       register: update_grub
       changed_when:
         - update_grub.rc == 0
-
-    - name: 'Disable enterprise repository'
-      when: ansible_facts['distribution'] == 'Debian'
-      ansible.builtin.replace:
-        path: /etc/apt/sources.list.d/pve-enterprise.list
-        regexp: '^deb'
-        replace: '# deb'

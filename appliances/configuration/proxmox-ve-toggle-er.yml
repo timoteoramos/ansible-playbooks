@@ -1,0 +1,19 @@
+---
+- name: Toggle Proxmox Virtual Environment enterprise repository
+  hosts: all
+
+  vars:
+    enterprise_enabled: false
+
+  tasks:
+    - name: 'Check PVE repository file'
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/pve-enterprise.list
+      register: pve
+
+    - name: '{% if enterprise_enabled %}Enable{% else %}Disable{% endif %} PVE enterprise repository'
+      when: pve.stat.exists
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list.d/pve-enterprise.list
+        regexp: "{% if enterprise_enabled %}'^# deb'{% else %}'^deb'{% endif %}"
+        replace: "{% if enterprise_enabled %}'deb'{% else %}'# deb'{% endif %}"

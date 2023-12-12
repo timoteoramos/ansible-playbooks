@@ -36,10 +36,3 @@
         update_cache: true
         pkg:
           - proxmox-backup-server
-
-    - name: 'Disable enterprise repository'
-      when: ansible_facts['distribution'] == 'Debian'
-      ansible.builtin.replace:
-        path: /etc/apt/sources.list.d/pbs-enterprise.list
-        regexp: '^deb'
-        replace: '# deb'
