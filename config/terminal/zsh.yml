@@ -1,32 +1,34 @@
 ---
-- name: Install and configure zsh, with nano as the default editor
+- name: Install and configure zsh with some useful tools
   hosts: all
 
   vars:
     setup_user:
 
   tasks:
-    - name: 'Install zsh and nano using apk'
+    - name: 'Install zsh, git and nano using apk'
       become: true
       when: ansible_facts['os_family'] == 'Alpine'
       community.general.apk:
-        name: nano,zsh
+        name: git,nano,zsh
         update_cache: true
 
-    - name: 'Install zsh and nano using apt'
+    - name: 'Install zsh, git and nano using apt'
       become: true
       when: ansible_facts['os_family'] == 'Debian'
       ansible.builtin.apt:
         update_cache: true
         pkg:
+          - git
           - nano
           - zsh
 
-    - name: 'Install zsh and nano using dnf'
+    - name: 'Install zsh, git and nano using dnf'
       become: true
       when: ansible_facts['os_family'] == 'RedHat'
       ansible.builtin.dnf:
         name:
+          - git
           - nano
           - zsh
         state: present
@@ -59,7 +61,7 @@
         dest: '{% if check1.stat.exists %}/etc/zsh/zshenv{% else %}/etc/zshenv{% endif %}'
         mode: '0644'
 
-    - name: 'Try a user-level configuration'
+    - name: 'Apply a user-level configuration'
       when: setup_user
       become: true
       become_user: '{{ setup_user }}'
@@ -68,3 +70,8 @@
         dest: ~/.zshrc
         owner: '{{ setup_user }}'
         mode: '0644'
+
+    - name: 'Change the default shell'
+      ansible.builtin.user:
+        name: '{{ setup_user }}'
+        shell: /bin/zsh
