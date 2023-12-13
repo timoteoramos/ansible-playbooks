@@ -1,0 +1,70 @@
+---
+- name: Install and configure zsh, with nano as the default editor
+  hosts: all
+
+  vars:
+    setup_user:
+
+  tasks:
+    - name: 'Install zsh and nano using apk'
+      become: true
+      when: ansible_facts['os_family'] == 'Alpine'
+      community.general.apk:
+        name: nano,zsh
+        update_cache: true
+
+    - name: 'Install zsh and nano using apt'
+      become: true
+      when: ansible_facts['os_family'] == 'Debian'
+      ansible.builtin.apt:
+        update_cache: true
+        pkg:
+          - nano
+          - zsh
+
+    - name: 'Install zsh and nano using dnf'
+      become: true
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.dnf:
+        name:
+          - nano
+          - zsh
+        state: present
+
+    - name: 'Configure zsh behavior on Alpine-based systems'
+      become: true
+      when: ansible_facts['os_family'] == 'Alpine'
+      ansible.builtin.template:
+        src: templates/system-zshrc.j2
+        dest: /etc/zsh/zshrc.d/common-tweaks.zsh
+        mode: '0644'
+
+    - name: 'Configure zsh behavior on Red Hat-based systems'
+      become: true
+      when: ansible_facts['os_family'] == 'RedHat'
+      ansible.builtin.template:
+        src: templates/system-zshrc.j2
+        dest: /etc/zshrc
+        mode: '0644'
+
+    - name: 'Check zsh environment on /etc/zsh/zshenv'
+      ansible.builtin.stat:
+        path: /etc/zsh/zshenv
+      register: check1
+
+    - name: 'Configure zsh environment'
+      become: true
+      ansible.builtin.template:
+        src: templates/system-zshenv.j2
+        dest: '{% if check1.stat.exists %}/etc/zsh/zshenv{% else %}/etc/zshenv{% endif %}'
+        mode: '0644'
+
+    - name: 'Try a user-level configuration'
+      when: setup_user
+      become: true
+      become_user: '{{ setup_user }}'
+      ansible.builtin.template:
+        src: templates/user-zshrc.j2
+        dest: ~/.zshrc
+        owner: '{{ setup_user }}'
+        mode: '0644'
