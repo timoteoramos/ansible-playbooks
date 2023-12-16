@@ -1,0 +1,69 @@
+---
+- name: Install Traefik
+  hosts: all
+
+  vars:
+    acme_email: 'noreply@example.org'
+    enable_https_redirect: false
+    image_tag: 'latest'
+    timezone: 'America/Sao_Paulo'
+
+  tasks:
+    - name: 'Pull the latest Traefik image'
+      community.docker.docker_image:
+        name: 'docker.io/traefik:{{ image_tag }}'
+        source: 'pull'
+
+    - name: 'Check the current service'
+      community.docker.docker_swarm_service_info:
+        name: 'proxy_traefik'
+      register: check_proxy_traefik
+
+    - name: 'Remove service if exists'
+      when: check_proxy_traefik.exists
+      community.docker.docker_swarm_service:
+        name: 'proxy_traefik'
+        state: 'absent'
+
+    - name: 'Initialize the service'
+      community.docker.docker_swarm_service:
+        name: 'proxy_traefik'
+        image: 'docker.io/traefik:{{ image_tag }}'
+        args:
+          - '--providers.docker'
+          - '--providers.docker.exposedbydefault=false'
+          - '--providers.docker.swarmmode'
+          - '--entrypoints.http=true'
+          - '--entrypoints.http.address=:80'
+          - '{% if enable_https_redirect %}--entrypoints.http.http.redirections.entrypoint.to=https{% endif %}'
+          - '{% if enable_https_redirect %}--entrypoints.http.http.redirections.entrypoint.scheme=https{% endif %}'
+          - '--entrypoints.https=true'
+          - '--entrypoints.https.address=:443'
+          - '--certificatesResolvers.letsencrypt.acme.email={{ acme_email }}'
+          - '--certificatesResolvers.letsencrypt.acme.storage=/etc/traefik/acme.json'
+          - '--certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=http'
+          - '--accesslog'
+          - '--log'
+          - '--api'
+        env:
+          TZ: '{{ timezone }}'
+        mounts:
+          - source: '/var/run/docker.sock'
+            target: '/var/run/docker.sock'
+          - source: 'proxy_traefik_config'
+            target: '/etc/traefik'
+            type: 'volume'
+        publish:
+          - mode: 'host'
+            protocol: 'tcp'
+            published_port: 80
+            target_port: 80
+          - mode: 'host'
+            protocol: 'tcp'
+            published_port: 443
+            target_port: 443
+        networks:
+          - 'public'
+        placement:
+          constraints:
+            - 'node.role == manager'

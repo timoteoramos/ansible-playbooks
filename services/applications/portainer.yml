@@ -1,0 +1,100 @@
+---
+- name: Install Portainer Community Edition
+  hosts: all
+
+  vars:
+    image_tag: 'latest'
+    agent_cluster_addr: 'tasks.portainer_agent'
+    traefik_domain: 'portainer.example.org'
+    timezone: 'America/Sao_Paulo'
+
+  tasks:
+    - name: 'Pull the latest Portainer agent image'
+      community.docker.docker_image:
+        name: 'docker.io/portainer/agent:{{ image_tag }}'
+        source: 'pull'
+
+    - name: 'Pull the latest Portainer CE image'
+      community.docker.docker_image:
+        name: 'docker.io/portainer/portainer-ce:{{ image_tag }}'
+        source: 'pull'
+
+    - name: 'Check the current agent service'
+      community.docker.docker_swarm_service_info:
+        name: 'portainer_agent'
+      register: check_portainer_agent
+
+    - name: 'Remove agent service if exists'
+      when: check_portainer_agent.exists
+      community.docker.docker_swarm_service:
+        name: 'portainer_agent'
+        state: 'absent'
+
+    - name: 'Check the current app service'
+      community.docker.docker_swarm_service_info:
+        name: 'portainer_app'
+      register: check_portainer_app
+
+    - name: 'Remove app service if exists'
+      when: check_portainer_app.exists
+      community.docker.docker_swarm_service:
+        name: 'portainer_app'
+        state: 'absent'
+
+    - name: 'Initialize the agent service'
+      community.docker.docker_swarm_service:
+        name: 'portainer_agent'
+        image: 'docker.io/portainer/agent:{{ image_tag }}'
+        env:
+          AGENT_CLUSTER_ADDR: '{{ agent_cluster_addr }}'
+          TZ: '{{ timezone }}'
+        mounts:
+          - source: '/var/run/docker.sock'
+            target: '/var/run/docker.sock'
+          - source: '/var/lib/docker/volumes'
+            target: '/var/lib/docker/volumes'
+        networks:
+          - 'services'
+        mode: 'global'
+        placement:
+          constraints:
+            - 'node.platform.os == linux'
+
+    - name: 'Initialize the app service'
+      community.docker.docker_swarm_service:
+        name: 'portainer_app'
+        image: 'docker.io/portainer/portainer-ce:{{ image_tag }}'
+        args:
+          - '-H'
+          - 'tcp://{{ agent_cluster_addr }}:9001'
+          - '--tlsskipverify'
+        env:
+          TZ: '{{ timezone }}'
+        mounts:
+          - source: 'portainer_app_data'
+            target: '/data'
+            type: 'volume'
+        publish:
+          - mode: 'host'
+            protocol: 'tcp'
+            published_port: 8000
+            target_port: 8000
+          - mode: 'host'
+            protocol: 'tcp'
+            published_port: 9443
+            target_port: 9443
+        networks:
+          - 'public'
+          - 'services'
+        placement:
+          constraints:
+            - 'node.role == manager'
+        labels: >
+          'traefik.enable=true'
+          'traefik.docker.network=public'
+          'traefik.http.services.portainer_app.loadbalancer.server.port=9000'
+          'traefik.http.routers.portainer_app.rule=Host(`{{ traefik_domain }}`)'
+          'traefik.http.routers.portainer_app.service=portainer_app'
+          'traefik.http.routers.portainer_app.entrypoints=https'
+          'traefik.http.routers.portainer_app.tls=true'
+          'traefik.http.routers.portainer_app.tls.certresolver=letsencrypt'

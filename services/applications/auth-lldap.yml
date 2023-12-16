@@ -1,0 +1,70 @@
+---
+- name: Install LLDAP
+  hosts: all
+
+  vars:
+    image_tag: 'stable'
+    jwt_secret: 'REPLACE_WITH_RANDOM'
+    ldap_base_dn: 'dc=example,dc=com'
+    ldap_database_url: 'sqlite:///data/users.db?mode=rwc'
+    ldap_user_pass: 'REPLACE_WITH_PASSWORD'
+    ldaps_cert_file: '/data/certfile.crt'
+    ldaps_enable: 'false'
+    ldaps_key_file: '/data/keyfile.key'
+    timezone: 'America/Sao_Paulo'
+    traefik_domain: 'lldap.example.org'
+
+  tasks:
+    - name: 'Pull the latest LLDAP image'
+      community.docker.docker_image:
+        name: 'docker.io/lldap/lldap:{{ image_tag }}'
+        source: 'pull'
+
+    - name: 'Check the current service'
+      community.docker.docker_swarm_service_info:
+        name: 'auth_lldap'
+      register: check_auth_lldap
+
+    - name: 'Remove service if exists'
+      when: check_auth_lldap.exists
+      community.docker.docker_swarm_service:
+        name: 'auth_lldap'
+        state: 'absent'
+
+    - name: 'Initialize the service'
+      community.docker.docker_swarm_service:
+        name: 'auth_lldap'
+        image: 'docker.io/lldap/lldap:{{ image_tag }}'
+        env:
+          LLDAP_DATABASE_URL: '{{ ldap_database_url }}'
+          LLDAP_JWT_SECRET: '{{ jwt_secret }}'
+          LLDAP_LDAP_BASE_DN: '{{ ldap_base_dn }}'
+          LLDAP_LDAP_USER_PASS: '{{ ldap_user_pass }}'
+          LLDAP_LDAPS_OPTIONS__CERT_FILE: '{{ ldaps_cert_file }}'
+          LLDAP_LDAPS_OPTIONS__ENABLED: '{{ ldaps_enable }}'
+          LLDAP_LDAPS_OPTIONS__KEY_FILE: '{{ ldaps_key_file }}'
+          TZ: '{{ timezone }}'
+        mounts:
+          - source: 'auth_lldap_data'
+            target: '/data'
+            type: 'volume'
+        publish:
+          - mode: 'host'
+            protocol: 'tcp'
+            published_port: 6360
+            target_port: 6360
+        networks:
+          - 'public'
+          - 'services'
+        placement:
+          constraints:
+            - 'node.role == manager'
+        labels: >
+          'traefik.enable=true'
+          'traefik.docker.network=public'
+          'traefik.http.services.auth_lldap.loadbalancer.server.port=17170'
+          'traefik.http.routers.auth_lldap.rule=Host(`{{ traefik_domain }}`)'
+          'traefik.http.routers.auth_lldap.service=auth_lldap'
+          'traefik.http.routers.auth_lldap.entrypoints=https'
+          'traefik.http.routers.auth_lldap.tls=true'
+          'traefik.http.routers.auth_lldap.tls.certresolver=letsencrypt'
