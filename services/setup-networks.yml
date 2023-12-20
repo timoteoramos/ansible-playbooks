@@ -6,6 +6,7 @@
     public_ipv4: '10.254.0.0/16'
     public_ipv6: 'fdd1:ac8c:0557:7ce2::/64'
     services_ipv4: '10.253.0.0/16'
+    services_ipv6: 'fdb0:2268:0d1f:a2af::/64'
 
   tasks:
     - name: 'Create "public" network'
@@ -21,5 +22,7 @@
       community.docker.docker_network:
         name: services
         driver: overlay
+        enable_ipv6: true
         ipam_config:
           - subnet: '{{ services_ipv4 }}'
+          - subnet: '{{ services_ipv6 }}'
