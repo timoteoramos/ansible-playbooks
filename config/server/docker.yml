@@ -3,7 +3,7 @@
   hosts: all
 
   vars:
-    docker_ipv6_bridge: 2001:db8:1::/64
+    docker_ipv6_bridge: fdeb:f053:6d14:0b89::/64
 
   tasks:
     - name: 'Create the Docker configuration directory'
