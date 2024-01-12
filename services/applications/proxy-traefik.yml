@@ -4,8 +4,24 @@
 
   vars:
     acme_email: 'noreply@example.org'
-    enable_https_redirect: false
+    enable_https_redirect: true
     image_tag: 'latest'
+    dns_provider: ''
+    le_aws_acces_key_id: ''
+    le_aws_access_key_secret: ''
+    le_cloudflare_api_email: ''
+    le_cloudflare_api_key: ''
+    le_cloudflare_dns_api_token: ''
+    le_cloudflare_zone_api_token: ''
+    le_digitalocean_auth_token: ''
+    le_dreamhost_api_key: ''
+    le_lightsail_dns_zone: ''
+    le_ovh_application_key: ''
+    le_ovh_application_secret: ''
+    le_ovh_consumer_key: ''
+    le_ovh_endpoint: ''
+    le_route53_aws_region: ''
+    le_route53_hosted_zone_id: ''
     timezone: 'America/Sao_Paulo'
 
   tasks:
@@ -41,11 +57,27 @@
           - '--entrypoints.https.address=:443'
           - '--certificatesResolvers.letsencrypt.acme.email={{ acme_email }}'
           - '--certificatesResolvers.letsencrypt.acme.storage=/etc/traefik/acme.json'
-          - '--certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=http'
+          - '--certificatesresolvers.letsencrypt.acme.dnschallenge={% if dns_provider %}true{% else %}false{% endif %}'
+          - '--certificatesresolvers.letsencrypt.acme.{% if dns_provider %}dnschallenge.provider={{ dns_provider }}{% else %}httpChallenge.entryPoint=http{% endif %}'
           - '--accesslog'
           - '--log'
           - '--api'
         env:
+          AWS_ACCESS_KEY_ID: '{{ le_aws_acces_key_id }}'
+          AWS_HOSTED_ZONE_ID: '{{ le_route53_hosted_zone_id }}'
+          AWS_REGION: '{{ le_route53_aws_region }}'
+          AWS_SECRET_ACCESS_KEY: '{{ le_aws_access_key_secret }}'
+          CF_API_EMAIL: '{{ le_cloudflare_api_email }}'
+          CF_API_KEY: '{{ le_cloudflare_api_key }}'
+          CF_DNS_API_TOKEN: '{{ le_cloudflare_dns_api_token }}'
+          CF_ZONE_API_TOKEN: '{{ le_cloudflare_zone_api_token }}'
+          DO_AUTH_TOKEN: '{{ le_digitalocean_auth_token }}'
+          DNS_ZONE: '{{ le_lightsail_dns_zone }}'
+          DREAMHOST_API_KEY: '{{ le_dreamhost_api_key }}'
+          OVH_APPLICATION_KEY: '{{ le_ovh_application_key }}'
+          OVH_APPLICATION_SECRET: '{{ le_ovh_application_secret }}'
+          OVH_CONSUMER_KEY: '{{ le_ovh_consumer_key }}'
+          OVH_ENDPOINT: '{{ le_ovh_endpoint }}'
           TZ: '{{ timezone }}'
         mounts:
           - source: '/var/run/docker.sock'
@@ -66,4 +98,6 @@
           - 'public'
         placement:
           constraints:
+            - 'node.labels.service-proxy == true'
             - 'node.role == manager'
+        mode: 'global'
