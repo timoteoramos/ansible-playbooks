@@ -1,0 +1,45 @@
+---
+- name: Install Datadog Agent on selected hosts
+  hosts: all
+
+  vars:
+    datadog_api_key: ""
+
+  tasks:
+    - name: "Download the APM Instrumentation script"
+      ansible.builtin.get_url:
+        url: https://s3.amazonaws.com/dd-agent/scripts/install_script_docker_injection.sh
+        dest: /tmp/install_script_docker_injection.sh
+        mode: "0755"
+
+    - name: "Run the APM Instrumentation script"
+      ansible.builtin.shell: /tmp/install_script_docker_injection.sh
+
+    - name: "Remove the APM Instrumentation script"
+      ansible.builtin.file:
+        path: "/tmp/install_script_docker_injection.sh"
+        state: absent
+
+    - name: "Create the container agent"
+      community.docker.docker_container:
+        name: dd-agent
+        image: gcr.io/datadoghq/agent:7
+        cgroupns_mode: host
+        state: started
+        recreate: true
+        env:
+          DD_API_KEY: "{{ datadog_api_key }}"
+          DD_APM_ENABLED: "true"
+          DD_APM_NON_LOCAL_TRAFFIC: "true"
+          DD_APM_RECEIVER_SOCKET: "/opt/datadog/apm/inject/run/apm.socket"
+          DD_DOGSTATSD_SOCKET: "/opt/datadog/apm/inject/run/dsd.socket"
+          DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+          DD_LOGS_ENABLED: "true"
+          DD_SITE: "us5.datadoghq.com"
+
+        volumes:
+          - /opt/datadog/apm:/opt/datadog/apm
+          - /proc/:/host/proc/:ro
+          - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+          - /var/lib/docker/containers:/var/lib/docker/containers:ro
+          - /var/run/docker.sock:/var/run/docker.sock:ro
