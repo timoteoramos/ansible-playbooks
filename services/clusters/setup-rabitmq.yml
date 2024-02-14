@@ -3,8 +3,15 @@
   hosts: all
 
   vars:
+    enable_ldap: "no"
     erl_cookie: "changeme"
     image_tag: "3.12"
+    ldap_servers: ""
+    ldap_servers_port: "389"
+    ldap_user_dn_pattern: "cn=$${username},ou=users,dc=example,dc=org"
+    ldap_tls: "no"
+    local_password: "bitnami"
+    local_user: "user"
     stats_service_name: "rabbitmq_stats"
     timezone: "America/Sao_Paulo"
     uninstall: false
@@ -55,10 +62,16 @@
         image: "docker.io/bitnami/rabbitmq:{{ image_tag }}"
         hostname: "{{ stats_service_name }}"
         env:
+          RABBITMQ_ENABLE_LDAP: "{{ enable_ldap }}"
           RABBITMQ_ERL_COOKIE: "{{ erl_cookie }}"
+          RABBITMQ_LDAP_TLS: "{{ ldap_tls }}"
+          RABBITMQ_LDAP_SERVERS: "{{ ldap_servers }}"
+          RABBITMQ_LDAP_SERVERS_PORT: "{{ ldap_servers_port }}"
+          RABBITMQ_LDAP_USER_DN_PATTERN: "{{ ldap_user_dn_pattern }}"
           RABBITMQ_NODE_NAME: "rabbit@{{ stats_service_name }}"
           RABBITMQ_NODE_TYPE: "stats"
-          #RABBITMQ_USE_LONGNAME: "true"
+          RABBITMQ_PASSWORD: "{{ local_password }}"
+          RABBITMQ_USERNAME: "{{ local_user }}"
           TZ: "{{ timezone }}"
         networks:
           - services
@@ -70,12 +83,6 @@
             source: rabbitmq_stats_data
             target: /bitnami/rabbitmq/mnesia
 
-    #    - name: "Wait 2 minutes until start the queue services"
-    #      when: uninstall == false
-    #      ansible.builtin.wait_for:
-    #        timeout: 120
-    #      delegate_to: localhost
-
     - name: "Initialize the queue disc service"
       when: uninstall == false
       community.docker.docker_swarm_service:
@@ -84,10 +91,16 @@
         hostname: "rmqdisc_{{ '{{' }} .Node.Hostname {{ '}}' }}"
         env:
           RABBITMQ_CLUSTER_NODE_NAME: "rabbit@{{ stats_service_name }}"
+          RABBITMQ_ENABLE_LDAP: "{{ enable_ldap }}"
           RABBITMQ_ERL_COOKIE: "{{ erl_cookie }}"
+          RABBITMQ_LDAP_TLS: "{{ ldap_tls }}"
+          RABBITMQ_LDAP_SERVERS: "{{ ldap_servers }}"
+          RABBITMQ_LDAP_SERVERS_PORT: "{{ ldap_servers_port }}"
+          RABBITMQ_LDAP_USER_DN_PATTERN: "{{ ldap_user_dn_pattern }}"
           RABBITMQ_NODE_NAME: "rabbit@rmqdisc_{{ '{{' }} .Node.Hostname {{ '}}' }}"
           RABBITMQ_NODE_TYPE: "queue-disc"
-          #RABBITMQ_USE_LONGNAME: "true"
+          RABBITMQ_PASSWORD: "{{ local_password }}"
+          RABBITMQ_USERNAME: "{{ local_user }}"
           TZ: "{{ timezone }}"
         networks:
           - services
@@ -108,10 +121,16 @@
         hostname: "rmqram_{{ '{{' }} .Node.Hostname {{ '}}' }}"
         env:
           RABBITMQ_CLUSTER_NODE_NAME: "rabbit@{{ stats_service_name }}"
+          RABBITMQ_ENABLE_LDAP: "{{ enable_ldap }}"
           RABBITMQ_ERL_COOKIE: "{{ erl_cookie }}"
+          RABBITMQ_LDAP_TLS: "{{ ldap_tls }}"
+          RABBITMQ_LDAP_SERVERS: "{{ ldap_servers }}"
+          RABBITMQ_LDAP_SERVERS_PORT: "{{ ldap_servers_port }}"
+          RABBITMQ_LDAP_USER_DN_PATTERN: "{{ ldap_user_dn_pattern }}"
           RABBITMQ_NODE_NAME: "rabbit@rmqram_{{ '{{' }} .Node.Hostname {{ '}}' }}"
           RABBITMQ_NODE_TYPE: "queue-ram"
-          #RABBITMQ_USE_LONGNAME: "true"
+          RABBITMQ_PASSWORD: "{{ local_password }}"
+          RABBITMQ_USERNAME: "{{ local_user }}"
           TZ: "{{ timezone }}"
         networks:
           - services
