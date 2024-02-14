@@ -59,7 +59,6 @@
         placement:
           constraints:
             - "node.labels.service-auth == true"
-            - "node.role == manager"
         labels: >
           'traefik.enable=true'
           'traefik.docker.network=public'
