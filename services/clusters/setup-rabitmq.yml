@@ -1,0 +1,125 @@
+---
+- name: Install RabbitMQ
+  hosts: all
+
+  vars:
+    erl_cookie: "changeme"
+    image_tag: "3.12"
+    stats_service_name: "rabbitmq_stats"
+    timezone: "America/Sao_Paulo"
+    uninstall: false
+
+  tasks:
+    - name: "Pull the latest image"
+      community.docker.docker_image:
+        name: "docker.io/bitnami/rabbitmq:{{ image_tag }}"
+        source: "pull"
+
+    - name: "Check status of the stats service"
+      community.docker.docker_swarm_service_info:
+        name: "{{ stats_service_name }}"
+      register: service_stats
+
+    - name: "Check status of the queue disc service"
+      community.docker.docker_swarm_service_info:
+        name: "rabbitmq_queue_disc"
+      register: service_queue_disc
+
+    - name: "Check status of the queue ram service"
+      community.docker.docker_swarm_service_info:
+        name: "rabbitmq_queue_ram"
+      register: service_queue_ram
+
+    - name: "Remove stats service if exists"
+      when: service_stats.exists
+      community.docker.docker_swarm_service:
+        name: "{{ stats_service_name }}"
+        state: "absent"
+
+    - name: "Remove queue disc service if exists"
+      when: service_queue_disc.exists
+      community.docker.docker_swarm_service:
+        name: "rabbitmq_queue_disc"
+        state: "absent"
+
+    - name: "Remove queue ram service if exists"
+      when: service_queue_ram.exists
+      community.docker.docker_swarm_service:
+        name: "rabbitmq_queue_ram"
+        state: "absent"
+
+    - name: "Initialize the stats service"
+      when: uninstall == false
+      community.docker.docker_swarm_service:
+        name: "{{ stats_service_name }}"
+        image: "docker.io/bitnami/rabbitmq:{{ image_tag }}"
+        hostname: "{{ stats_service_name }}"
+        env:
+          RABBITMQ_ERL_COOKIE: "{{ erl_cookie }}"
+          RABBITMQ_NODE_NAME: "rabbit@{{ stats_service_name }}"
+          RABBITMQ_NODE_TYPE: "stats"
+          #RABBITMQ_USE_LONGNAME: "true"
+          TZ: "{{ timezone }}"
+        networks:
+          - services
+        placement:
+          constraints:
+            - "node.labels.rabbitmq-stats == true"
+        mounts:
+          - type: volume
+            source: rabbitmq_stats_data
+            target: /bitnami/rabbitmq/mnesia
+
+    #    - name: "Wait 2 minutes until start the queue services"
+    #      when: uninstall == false
+    #      ansible.builtin.wait_for:
+    #        timeout: 120
+    #      delegate_to: localhost
+
+    - name: "Initialize the queue disc service"
+      when: uninstall == false
+      community.docker.docker_swarm_service:
+        name: "rabbitmq_queue_disc"
+        image: "docker.io/bitnami/rabbitmq:{{ image_tag }}"
+        hostname: "rmqdisc_{{ '{{' }} .Node.Hostname {{ '}}' }}"
+        env:
+          RABBITMQ_CLUSTER_NODE_NAME: "rabbit@{{ stats_service_name }}"
+          RABBITMQ_ERL_COOKIE: "{{ erl_cookie }}"
+          RABBITMQ_NODE_NAME: "rabbit@rmqdisc_{{ '{{' }} .Node.Hostname {{ '}}' }}"
+          RABBITMQ_NODE_TYPE: "queue-disc"
+          #RABBITMQ_USE_LONGNAME: "true"
+          TZ: "{{ timezone }}"
+        networks:
+          - services
+        placement:
+          constraints:
+            - "node.labels.rabbitmq-queue-disc == true"
+        mode: "global"
+        mounts:
+          - type: volume
+            source: rabbitmq_queue_disc_data
+            target: /bitnami/rabbitmq/mnesia
+
+    - name: "Initialize the queue ram service"
+      when: uninstall == false
+      community.docker.docker_swarm_service:
+        name: "rabbitmq_queue_ram"
+        image: "docker.io/bitnami/rabbitmq:{{ image_tag }}"
+        hostname: "rmqram_{{ '{{' }} .Node.Hostname {{ '}}' }}"
+        env:
+          RABBITMQ_CLUSTER_NODE_NAME: "rabbit@{{ stats_service_name }}"
+          RABBITMQ_ERL_COOKIE: "{{ erl_cookie }}"
+          RABBITMQ_NODE_NAME: "rabbit@rmqram_{{ '{{' }} .Node.Hostname {{ '}}' }}"
+          RABBITMQ_NODE_TYPE: "queue-ram"
+          #RABBITMQ_USE_LONGNAME: "true"
+          TZ: "{{ timezone }}"
+        networks:
+          - services
+        placement:
+          constraints:
+            - "node.labels.rabbitmq-queue-ram == true"
+        mode: "global"
+        mounts:
+          - type: volume
+            source: rabbitmq_queue_ram_data
+            target: /bitnami/rabbitmq/mnesia
