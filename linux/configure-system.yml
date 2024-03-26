@@ -27,6 +27,12 @@
         force: true
         follow: false
 
+    - name: "Install basic packges using apk"
+      when: ansible_facts["os_family"] == "Alpine"
+      ansible.builtin.apk:
+        name: py3-cryptography
+        update_cache: true
+
     - name: "Install basic packages using apt"
       when: ansible_facts["os_family"] == "Debian"
       ansible.builtin.apt:
@@ -35,6 +41,7 @@
           - apt-utils
           - aptitude
           - locales
+          - python3-cryptography
           - tzdata
 
     - name: "Install basic packages using dnf"
@@ -44,6 +51,7 @@
           - dnf-plugins-core
           - epel-release
           - glibc-langpack-{{ langpack }}
+          - python3-cryptography
         state: present
 
     - name: "Reconfigure locales"

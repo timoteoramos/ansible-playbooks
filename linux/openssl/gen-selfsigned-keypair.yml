@@ -1,0 +1,39 @@
+---
+- name: Generate a self-signed keypair
+  hosts: all
+
+  vars:
+    common_name: "Ansible"
+    ssl_cert_file: "selfsigned_cert.pem"
+    ssl_certs_path: "/etc/ssl/certs"
+    ssl_key_file: "selfsigned_cert.key"
+    ssl_keys_path: "/etc/ssl/private"
+
+  tasks:
+    - name: "Create private key on {{ ssl_keys_path }}/{{ ssl_key_file }}"
+      community.crypto.openssl_privatekey:
+        mode: "0640"
+        path: "{{ ssl_keys_path }}/{{ ssl_key_file }}"
+      run_once: true
+
+    - name: "Create certificate signing request (CSR) for new certificate"
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ ssl_keys_path }}/{{ ssl_key_file }}"
+        common_name: "{{ common_name }}"
+        use_common_name_for_san: false
+        basic_constraints:
+          - "CA:TRUE"
+        basic_constraints_critical: true
+        key_usage:
+          - "keyCertSign"
+        key_usage_critical: true
+      run_once: true
+      register: cluster_ca_csr
+
+    - name: "Create self-signed certificate from CSR on {{ ssl_certs_path }}/{{ ssl_cert_file }}"
+      community.crypto.x509_certificate:
+        path: "{{ ssl_certs_path }}/{{ ssl_cert_file }}"
+        csr_content: "{{ cluster_ca_csr.csr }}"
+        privatekey_path: "{{ ssl_keys_path }}/{{ ssl_key_file }}"
+        provider: "selfsigned"
+      run_once: true

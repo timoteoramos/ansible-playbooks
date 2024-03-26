@@ -1,0 +1,15 @@
+---
+- name: Generate Diffie-Hellman parameters
+  hosts: all
+
+  vars:
+    ssl_certs_path: "/etc/ssl/certs"
+    ssl_dhparams_file: "cluster_dhparams.pem"
+    ssl_dhparams_size: 4096
+
+  tasks:
+    - name: "Create Diffie-Hellman parameters on {{ ssl_certs_path }}/{{ ssl_dhparams_file }}"
+      community.crypto.openssl_dhparam:
+        path: "{{ ssl_certs_path }}/{{ ssl_dhparams_file }}"
+        select_crypto_backend: "cryptography"
+        size: "{{ ssl_dhparams_size }}"

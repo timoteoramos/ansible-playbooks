@@ -1,0 +1,46 @@
+---
+- name: Generate a keypair signed with your own CA
+  hosts: all
+
+  vars:
+    cert_domain: "example.org"
+    ssl_cert_not_before: "-1d"
+    ssl_cert_not_after: "+365d"
+    ssl_cert_file: "ownca_cert.pem"
+    ssl_certs_path: "/etc/ssl/certs"
+    ssl_key_file: "ownca_cert.key"
+    ssl_keys_path: "/etc/ssl/private"
+    ssl_ownca_cert_file: "selfsigned_cert.pem"
+    ssl_ownca_key_file: "selfsigned_cert.key"
+
+  tasks:
+    - name: "Create private key on {{ ssl_keys_path }}/{{ ssl_key_file }}"
+      community.crypto.openssl_privatekey:
+        mode: "0640"
+        path: "{{ ssl_keys_path }}/{{ ssl_key_file }}"
+      run_once: true
+
+    - name: "Create certificate signing request (CSR) for new certificate"
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ ssl_keys_path }}/{{ ssl_key_file }}"
+        subject_alt_name:
+          - "DNS:{{ cert_domain }}"
+      run_once: true
+      register: csr
+
+    - name: "Sign certificate with {{ ssl_keys_path }}/{{ ssl_ownca_key_file }} CA"
+      community.crypto.x509_certificate_pipe:
+        csr_content: "{{ csr.csr }}"
+        provider: ownca
+        ownca_path: "{{ ssl_certs_path }}/{{ ssl_ownca_cert_file }}"
+        ownca_privatekey_path: "{{ ssl_keys_path }}/{{ ssl_ownca_key_file }}"
+        ownca_not_after: "{{ ssl_cert_not_after }}"
+        ownca_not_before: "{{ ssl_cert_not_before }}"
+      run_once: true
+      register: certificate
+
+    - name: "Write certificate file on {{ ssl_certs_path }}/{{ ssl_cert_file }}"
+      copy:
+        dest: "{{ ssl_certs_path }}/{{ ssl_cert_file }}"
+        content: "{{ certificate.certificate }}"
+      run_once: true
