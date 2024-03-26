@@ -101,3 +101,9 @@
             - 'node.labels.service-proxy == true'
             - 'node.role == manager'
         mode: 'global'
+
+    - name: "Add proxy label on host"
+      docker_node:
+        hostname: "{{ ansible_hostname }}"
+        labels:
+          service-proxy: "true"
