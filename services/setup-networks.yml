@@ -7,14 +7,14 @@
     services_ipv4: "10.253.0.0/16"
 
   tasks:
-    - name: 'Create "public" network'
+    - name: "Create 'public' network"
       community.docker.docker_network:
         name: public
         driver: overlay
         ipam_config:
           - subnet: "{{ public_ipv4 }}"
 
-    - name: 'Create "services" network'
+    - name: "Create 'services' network"
       community.docker.docker_network:
         name: services
         driver: overlay
