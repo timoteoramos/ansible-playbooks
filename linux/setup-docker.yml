@@ -1,0 +1,31 @@
+---
+- name: Install Docker
+  hosts: all
+
+  tasks:
+    - name: "Install Docker on Alpine"
+      when: ansible_facts["os_family"] == "Alpine"
+      community.general.apk:
+        name: docker-engine,py3-docker
+        update_cache: true
+
+    - name: "Install Docker on Debian-based distros"
+      when: ansible_facts["os_family"] == "Debian"
+      ansible.builtin.apt:
+        update_cache: true
+        pkg:
+          - docker.io
+          - python3-docker
+
+    - name: "Add Docker repository on RedHat-based distros"
+      ansible.builtin.shell: "dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
+      changed_when: true
+      when: ansible_facts["os_family"] == "RedHat"
+
+    - name: "Install Docker on RedHat-based distros"
+      when: ansible_facts["os_family"] == "RedHat"
+      ansible.builtin.dnf:
+        name:
+          - docker-ce
+          - python3-docker
+        state: present
