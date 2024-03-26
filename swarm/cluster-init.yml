@@ -3,13 +3,13 @@
   hosts: all
 
   vars:
-    advertise_addr: '127.0.0.1'
-    data_path_addr: '127.0.0.1'
+    advertise_addr: "127.0.0.1"
+    data_path_addr: "127.0.0.1"
     data_path_port: 9789
-    task_history_limit: 5
+    task_history_limit: 3
 
   tasks:
-    - name: 'Initialize the cluster'
+    - name: "Initialize the cluster"
       ansible.builtin.command: >
         docker swarm init
         --advertise-addr {{ advertise_addr }}
@@ -20,6 +20,6 @@
       changed_when:
         - cluster_init.rc == 0
 
-    - name: 'Display results'
+    - name: "Display results"
       ansible.builtin.debug:
         var: cluster_init.stdout
