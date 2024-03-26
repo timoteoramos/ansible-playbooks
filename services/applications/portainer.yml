@@ -99,3 +99,9 @@
           'traefik.http.routers.portainer_app.entrypoints=https'
           'traefik.http.routers.portainer_app.tls=true'
           'traefik.http.routers.portainer_app.tls.certresolver=letsencrypt'
+
+    - name: "Add Portainer label on host"
+      docker_node:
+        hostname: "{{ ansible_hostname }}"
+        labels:
+          service-portainer: "true"
