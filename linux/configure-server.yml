@@ -1,0 +1,53 @@
+---
+- name: Configure Linux (server-specific tasks)
+  hosts: all
+
+  tasks:
+    - name: "Check if console tty0 is configured in the boot command"
+      ansible.builtin.lineinfile:
+        backup: true
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX=".*console=tty0'
+        state: absent
+      check_mode: true
+      register: grub_tty0_check
+      changed_when: false
+
+    - name: "Check if console ttyS0 is configured in the boot command"
+      ansible.builtin.lineinfile:
+        backup: true
+        path: /etc/default/grub
+        regexp: '^GRUB_CMDLINE_LINUX=".*console=ttyS0,115200n8'
+        state: absent
+      check_mode: true
+      register: grub_ttys0_check
+      changed_when: false
+
+    - name: "Insert console tty0 if missing"
+      ansible.builtin.lineinfile:
+        backrefs: true
+        path: /etc/default/grub
+        regexp: "^(GRUB_CMDLINE_LINUX=\".*)\"$"
+        line: '\1 console=tty0"'
+      when: grub_tty0_check.found == 0
+
+    - name: "Insert console ttyS0 if missing"
+      ansible.builtin.lineinfile:
+        backrefs: true
+        path: /etc/default/grub
+        regexp: "^(GRUB_CMDLINE_LINUX=\".*)\"$"
+        line: '\1 console=ttyS0,115200n8"'
+      when: grub_ttys0_check.found == 0
+
+    - name: "Update GRUB"
+      ansible.builtin.shell: "update-grub || grub-mkconfig -o /boot/grub/grub.cfg"
+      changed_when: true
+      when: (grub_tty0_check.found == 0) or (grub_ttys0_check.found == 0)
+
+    - name: "Install some server-specific packages"
+      ansible.builtin.package:
+        name:
+          - htop
+          - ranger
+          - sysstat
+        state: present
