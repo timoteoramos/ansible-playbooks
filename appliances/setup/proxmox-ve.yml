@@ -2,58 +2,54 @@
 - name: Install Proxmox Virtual Environment
   hosts: all
 
-  vars:
-    kernel_version: 6.2
-    server_domain: example.local
-
   tasks:
-    - name: 'Configure /etc/hosts'
+    - name: "Configure /etc/hosts"
       ansible.builtin.template:
         src: templates/etc-hosts.j2
         dest: /etc/hosts
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
-    - name: 'Add no-subscription repository'
+    - name: "Add no-subscription repository"
       when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.template:
         src: templates/proxmox-ve-sources.j2
         dest: /etc/apt/sources.list.d/pve-install-repo.list
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
-    - name: 'Download the repository key'
+    - name: "Download the repository key"
       when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.get_url:
         url: https://enterprise.proxmox.com/debian/proxmox-release-{{ ansible_facts['distribution_release'] }}.gpg
         dest: /etc/apt/trusted.gpg.d/proxmox-release-{{ ansible_facts['distribution_release'] }}.gpg
-        mode: '0644'
+        mode: "0644"
 
-    - name: 'Ensure aptitude is installed'
+    - name: "Ensure aptitude is installed"
       when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.apt:
         update_cache: true
         pkg:
           - aptitude
 
-    - name: 'Do a full-upgrade before continue'
+    - name: "Do a full-upgrade before continue"
       when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.apt:
         upgrade: full
 
-    - name: 'Install PVE kernel'
+    - name: "Install PVE kernel"
       when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.apt:
         pkg:
-          - pve-kernel-{{ kernel_version }}
+          - proxmox-default-kernel
 
-    - name: 'Perform a system reboot and wait to continue'
+    - name: "Perform a system reboot and wait to continue"
       when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.reboot:
 
-    - name: 'Install PVE'
+    - name: "Install PVE"
       when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.apt:
         update_cache: true
@@ -62,7 +58,7 @@
           - postfix
           - open-iscsi
 
-    - name: 'Remove Debian kernel and os-prober'
+    - name: "Remove Debian kernel and os-prober"
       when: ansible_facts['distribution'] == 'Debian'
       ansible.builtin.apt:
         pkg:
@@ -70,7 +66,7 @@
           - os-prober
         state: absent
 
-    - name: 'Update grub'
+    - name: "Update grub"
       when: ansible_facts['os_family'] == 'Debian'
       ansible.builtin.command: update-grub
       register: update_grub
